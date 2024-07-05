@@ -123,13 +123,9 @@ def get_threats_list(threat_to):
     threats = []
     places_occupied = [{place: figure} for place, figure in places_and_figures.items() if figure in figures_names]
     for place in places_occupied:
-
         threat = is_threat_from_figure(place, threat_to=threat_to)
         if threat:
-            if threat_to == 'white':
-                threats.append(place)
-            elif threat_to == 'black':
-                threats.append(place)
+            threats.append(place)
     return threats
 
 
@@ -138,9 +134,11 @@ def is_threat_from_figure(place_with_figure, threat_to):
     defines whether there is a threat from specified figure to the other specified side (white or black).
     If threat_to is 'white': a threat is defined to the white figure from black figures.
     If threat_to is 'black': a threat is defined to black figures from the white figure.
+    Threat from the white figure to a black figure is being defined by checking movements from the black figure
+    with white movement capabilities.
     :param place_with_figure: place and figure to define threat from
     :param threat_to: 'white' or 'black'. Whom to define a threat to.
-    :return: True or False when threat_to is white. place or None when threat_to is black
+    :return: True or False
     """
     x, y = list(place_with_figure.keys())[0]
     if threat_to == 'white':
@@ -167,7 +165,6 @@ def is_threat_from_figure(place_with_figure, threat_to):
                     if place_moved_to == white_figure_place:
                         # black figure is on the way. the white figure makes a threat to it
                         return True
-
                 # if place_moved_to_occupied_by == '':    -  not occupied place
             else:
                 # place is outside of the board
@@ -180,22 +177,35 @@ def is_threat_from_figure(place_with_figure, threat_to):
                 break
 
 
+def make_list_of_figures_for_output(place_figure_list):
+    list_to_return = []
+    for place in place_figure_list:
+        (x, y) = list(place.keys())[0]
+        x_letter = chr(x + 96)
+        figure = place[(x, y)]
+        list_to_return.append(f'{figure} at {x_letter}{y}')
+    return list_to_return
+
+
 def start_program():
     generate_places()
     show_info()
     prompt_to_input_white_figure()
     prompt_to_input_figures()
-    places_occupied = [{place: figure} for place, figure in places_and_figures.items() if figure in figures_names]
-    print(f'List of all inputted figures: {places_occupied}')
+    places_occupied = [{place: figure} for place, figure in places_and_figures.items()
+                       if figure in figures_names or figure.startswith('white')]
+    print(f'List of all inputted figures: {make_list_of_figures_for_output(places_occupied)}')
     threats_to_white = get_threats_list('white')
     if threats_to_white:
-        print(f'{len(threats_to_white)} threat/s to the white figure detected from figure/s: {threats_to_white}')
+        print(f'{len(threats_to_white)} threat/s to the white figure detected from figure/s: '
+              f'{make_list_of_figures_for_output(threats_to_white)}')
     else:
         print('No threats detected to the white figure.')
 
     threats_to_black = get_threats_list('black')
     if threats_to_black:
-        print(f'{len(threats_to_black)} threat/s to black figures detected from the white figure: {threats_to_black}')
+        print(f'{len(threats_to_black)} threat/s to black figures detected from the white figure: '
+              f'{make_list_of_figures_for_output(threats_to_black)}')
     else:
         print('No threats detected from the white figure.')
 
