@@ -37,8 +37,8 @@ figures = {'king': {'long_step': False, 'moves': [(-1, -1), (-1, 0), (-1, 1), (0
            'bishop': {'long_step': True, 'moves': [(-1, -1), (-1, 1), (1, -1), (1, 1)]},
            'knight': {'long_step': False, 'moves': [(-2, -1), (-2, 1), (2,-1), (2,1), (1,2), (-1,2), (-1,-2), (1,-2)]},
            'pawn': {'long_step': False, 'moves': [(-1, -1), (-1, 1), (1, -1), (1, 1)]}}
-target = None
-
+white_figure_place = None
+white_figure = None
 
 def generate_places():
     global places_and_figures
@@ -48,29 +48,41 @@ def generate_places():
 
 
 def show_info():
-    print("""It is a program which will answer a simple question –
-    given a board state that the user enters, with 1 white figure and up to 16 black figures, which black figures can 
+    print("""It is a program which will answer a simple question – \
+    given a board state that the user enters, with 1 white figure and up to 16 black figures, which black figures can \
     the white figure take?""")
 
 
-def prompt_to_input_target():
-    while True:
-        text = input('Please input target place (from a1 to h8): ')
+def get_figure_and_place_from_input(text: str):
+    figure, place_letter_number = text.strip().lower().split()
+    if figure not in figures_names:
+        print(f'{figure} is not as expected. Possible figures: {figures_names}')
+        raise ValueError
+    place = get_xy_coordinates_from_letter_number(place_letter_number)
+    if place not in places_and_figures:
+        print('The place is outside of the board. A place must be from a1 to h8')
+        raise ValueError
+    return figure, place
+
+
+def prompt_to_input_white_figure():
+    global white_figure_place
+    global white_figure
+    while not white_figure_place:
+        text = input(f'Please input white figure and its place (from a1 to h8), e.g. knight a5, possible figures: '
+                     f'{figures_names}:\n')
         try:
-            x, y = get_xy_coordinates_from_letter_number(text)
-            if (x, y) in places_and_figures:
-                places_and_figures[(x, y)] = 'target'
-                target = (x, y)
-                break
-            else:
-                print('The place is outside of the board. Please choose a place within the board (limits).')
+            figure, place = get_figure_and_place_from_input(text)
+            places_and_figures[place] = f'white {figure}'
+            white_figure_place = place
+            white_figure = figure
         except ValueError:
             print('Wrong input.')
 
 
 def prompt_to_input_figures():
-    print(f'Please input figures and their places (from a1 to h8) one by one. Up to {figures_count_limit} pcs.\n'
-                 f'Figures: {figures.keys()}')
+    print(f'Please input black figures and their places (from a1 to h8) one by one. Up to {figures_count_limit} pcs.\n'
+                 f'Possible figures: {figures_names}.')
     figure_number = 1
     while True:
         if figure_number == 1:
@@ -82,25 +94,17 @@ def prompt_to_input_figures():
             print('Figure number limit achieved. No more figures can be added.')
             break
 
-        if figure_number > 1:
-            if text.lower() == 'done':
-                break
+        if figure_number > 1 and text.lower() == 'done':
+            break
 
         try:
-            figure, place = text.lower().split()
-            if figure not in figures.keys():
-                raise ValueError
-            x, y = get_xy_coordinates_from_letter_number(place)
-            if (x, y) in places_and_figures:
-                if places_and_figures[(x, y)] == '':
-                    places_and_figures[(x, y)] = figure
-                    figure_number += 1
-                else:
-                    print(f'The place is already occupied. Please choose another place.')
-                    continue
-                # break
+            figure, place = get_figure_and_place_from_input(text)
+            if places_and_figures[place] == '':
+                places_and_figures[place] = figure
+                figure_number += 1
             else:
-                print('Please choose a place within the board.')
+                print(f'The place is already occupied. Please choose another place.')
+                continue
         except ValueError:
             print('Wrong input.')
 
@@ -115,18 +119,35 @@ def get_xy_coordinates_from_letter_number(letter_number: str):
         raise ValueError
 
 
-def get_threats_list():
+def get_threats_list(threat_to):
     threats = []
-    places_occupied = [{place: figure} for place, figure in places_and_figures.items() if figure in figures.keys()]
+    places_occupied = [{place: figure} for place, figure in places_and_figures.items() if figure in figures_names]
     for place in places_occupied:
-        if is_threat_from_figure(place):
-            threats.append(place)
+
+        threat = is_threat_from_figure(place, threat_to=threat_to)
+        if threat:
+            if threat_to == 'white':
+                threats.append(place)
+            elif threat_to == 'black':
+                threats.append(place)
     return threats
 
 
-def is_threat_from_figure(place_with_figure):
+def is_threat_from_figure(place_with_figure, threat_to):
+    """
+    defines whether there is a threat from specified figure to the other specified side (white or black).
+    If threat_to is 'white': a threat is defined to the white figure from black figures.
+    If threat_to is 'black': a threat is defined to black figures from the white figure.
+    :param place_with_figure: place and figure to define threat from
+    :param threat_to: 'white' or 'black'. Whom to define a threat to.
+    :return: True or False when threat_to is white. place or None when threat_to is black
+    """
     x, y = list(place_with_figure.keys())[0]
-    figure = place_with_figure[(x, y)]
+    if threat_to == 'white':
+        figure = place_with_figure[(x, y)]
+    elif threat_to == 'black':
+        figure = white_figure
+        # x, y = white_figure_place
     moves = figures[figure]['moves']
     long_step = figures[figure]['long_step']
     for move in moves:
@@ -135,16 +156,19 @@ def is_threat_from_figure(place_with_figure):
         while True:
             if place_moved_to in places_and_figures:
                 place_moved_to_occupied_by = places_and_figures[place_moved_to]
-                if place_moved_to_occupied_by == 'target':
-                    # it is a threat
-                    return True
-                elif place_moved_to_occupied_by != '':
-                    # another figure is on the way
-                    break
+                if threat_to == 'white':
+                    if place_moved_to_occupied_by.startswith('white'):
+                        # it is a threat
+                        return True
+                    elif place_moved_to_occupied_by != '':
+                        # another black figure is on the way
+                        break
+                elif threat_to == 'black':
+                    if place_moved_to == white_figure_place:
+                        # black figure is on the way. the white figure makes a threat to it
+                        return True
 
-                elif place_moved_to_occupied_by == '':
-                    # free place
-                    pass
+                # if place_moved_to_occupied_by == '':    -  not occupied place
             else:
                 # place is outside of the board
                 break
@@ -159,15 +183,21 @@ def is_threat_from_figure(place_with_figure):
 def start_program():
     generate_places()
     show_info()
-    prompt_to_input_target()
+    prompt_to_input_white_figure()
     prompt_to_input_figures()
-    threats = get_threats_list()
-    if threats:
-        # threats_figures_list = [fig for t in threats for fig in t.values()]
-        # print(f'{len(threats)} threat/s detected from figure/s: {threats_figures_list}')
-        print(f'{len(threats)} threat/s detected from figure/s: {threats}')
+    places_occupied = [{place: figure} for place, figure in places_and_figures.items() if figure in figures_names]
+    print(f'List of all inputted figures: {places_occupied}')
+    threats_to_white = get_threats_list('white')
+    if threats_to_white:
+        print(f'{len(threats_to_white)} threat/s to the white figure detected from figure/s: {threats_to_white}')
     else:
-        print('No threats detected')
+        print('No threats detected to the white figure.')
+
+    threats_to_black = get_threats_list('black')
+    if threats_to_black:
+        print(f'{len(threats_to_black)} threat/s to black figures detected from the white figure: {threats_to_black}')
+    else:
+        print('No threats detected from the white figure.')
 
 
 start_program()
