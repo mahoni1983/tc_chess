@@ -54,7 +54,6 @@ def show_info():
 
 
 def prompt_to_input_target():
-    global target
     while True:
         text = input('Please input target place (from a1 to h8): ')
         try:
@@ -76,7 +75,7 @@ def prompt_to_input_figures():
     while True:
         if figure_number == 1:
             text = input(f'Please input figure {figure_number} and it\'s place (e.g. knight a5): ')
-        elif figure_number < figures_count_limit:
+        elif figure_number <= figures_count_limit:
             text = input(f'Please input figure {figure_number} and it\'s place (e.g. knight a5) or "done" '
                          f'(without quotes) to finish input: ')
         else:
@@ -116,16 +115,16 @@ def get_xy_coordinates_from_letter_number(letter_number: str):
         raise ValueError
 
 
-def get_threads_list():
-    threads = []
+def get_threats_list():
+    threats = []
     places_occupied = [{place: figure} for place, figure in places_and_figures.items() if figure in figures.keys()]
     for place in places_occupied:
-        if is_thread_from_figure(place):
-            threads.append(place)
-    return threads
+        if is_threat_from_figure(place):
+            threats.append(place)
+    return threats
 
 
-def is_thread_from_figure(place_with_figure):
+def is_threat_from_figure(place_with_figure):
     x, y = list(place_with_figure.keys())[0]
     figure = place_with_figure[(x, y)]
     moves = figures[figure]['moves']
@@ -137,11 +136,12 @@ def is_thread_from_figure(place_with_figure):
             if place_moved_to in places_and_figures:
                 place_moved_to_occupied_by = places_and_figures[place_moved_to]
                 if place_moved_to_occupied_by == 'target':
-                    # it is a thread
+                    # it is a threat
                     return True
                 elif place_moved_to_occupied_by != '':
                     # another figure is on the way
-                    return False
+                    break
+
                 elif place_moved_to_occupied_by == '':
                     # free place
                     pass
@@ -161,12 +161,13 @@ def start_program():
     show_info()
     prompt_to_input_target()
     prompt_to_input_figures()
-    threads = get_threads_list()
-    if threads:
-        threads_figures_list = [fig for t in threads for fig in t.values()]
-        print(f'{len(threads)} thread/s detected from figure/s: {threads_figures_list}')
+    threats = get_threats_list()
+    if threats:
+        # threats_figures_list = [fig for t in threats for fig in t.values()]
+        # print(f'{len(threats)} threat/s detected from figure/s: {threats_figures_list}')
+        print(f'{len(threats)} threat/s detected from figure/s: {threats}')
     else:
-        print('No threads detected')
+        print('No threats detected')
 
 
 start_program()
