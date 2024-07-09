@@ -41,8 +41,6 @@ def main():
     # mins_words = mins_words.replace(' and', ',')
     # mins_words = mins_words.replace(' and', '')
     print(mins_words.capitalize())
-    pass
-...
 
 
 if __name__ == "__main__":
