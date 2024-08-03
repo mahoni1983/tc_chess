@@ -56,10 +56,9 @@ Sample Output
  [ 0.  0.  1.]]
 """
 import sys
-import numpy
 import numpy as np
 
-numpy.set_printoptions(legacy='1.13')
+np.set_printoptions(legacy='1.13')
 
 
 def get_next_line_from_input():
